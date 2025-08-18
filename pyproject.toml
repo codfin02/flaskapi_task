@@ -1,0 +1,45 @@
+[project]
+name = "fastapi-assignment"
+version = "0.1.0"
+description = "FastAPI 과제 프로젝트"
+authors = [
+    {name = "Student"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi (>=0.116.1,<0.117.0)",
+    "uvicorn (>=0.35.0,<0.36.0)",
+    "httpx (>=0.28.1,<0.29.0)",
+    "pytest (>=8.4.1,<9.0.0)",
+    "pytest-asyncio (>=1.1.0,<2.0.0)",
+    "coverage (>=7.10.4,<8.0.0)",
+    "black (>=25.1.0,<26.0.0)",
+    "ruff (>=0.12.9,<0.13.0)",
+    "mypy (>=1.17.1,<2.0.0)",
+    "pydantic (>=2.11.7,<3.0.0)"
+]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+python_version = 3.12
+strict = true
+
+[tool.coverage.run]
+omit = ["*/test_*.py"]
+
+[tool.coverage.report]
+exclude_also = [
+    "def __repr__",
+    "def __str__",
+    "if __name__ == .__main__.:",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
