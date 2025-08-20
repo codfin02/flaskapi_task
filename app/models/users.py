@@ -1,25 +1,48 @@
 import random
 from typing import ClassVar, List, Optional, Union
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class UserModel:
     _data: ClassVar[List["UserModel"]] = []  # 전체 사용자 데이터를 저장하는 리스트
     _id_counter: ClassVar[int] = 1  # ID 자동 증가를 위한 카운터
 
-    def __init__(self, username: str, age: int, gender: str) -> None:
+    def __init__(self, username: str, password: str, age: int, gender: str) -> None:
         self.id = UserModel._id_counter
         self.username = username
+        self.password = self.get_hashed_password(password)
         self.age = age
         self.gender = gender
+        self.last_login = None
 
         # 클래스가 인스턴스화 될 때 _data에 추가하고 _id_counter를 증가시킴
         UserModel._data.append(self)
         UserModel._id_counter += 1
 
+    @staticmethod
+    def get_hashed_password(password: str) -> str:
+        """비밀번호 해시화"""
+        return pwd_context.hash(password)
+
+    @staticmethod
+    def verify_password(plain_password: str, hashed_password: str) -> bool:
+        """비밀번호 검증"""
+        return pwd_context.verify(plain_password, hashed_password)
+
     @classmethod
-    def create(cls, username: str, age: int, gender: str) -> "UserModel":
+    def authenticate(cls, username: str, password: str) -> Optional["UserModel"]:
+        """사용자 인증"""
+        for user in cls._data:
+            if user.username == username and cls.verify_password(password, user.password):
+                return user
+        return None
+
+    @classmethod
+    def create(cls, username: str, password: str, age: int, gender: str) -> "UserModel":
         """새로운 유저 추가"""
-        return cls(username, age, gender)
+        return cls(username, password, age, gender)
 
     @classmethod
     def get(cls, **kwargs: Union[str, int]) -> Optional["UserModel"]:
@@ -60,6 +83,7 @@ class UserModel:
         for i in range(1, 11):
             cls(
                 username=f"dummy{i}",
+                password=f"password{i}",
                 age=15 + i,
                 gender=random.choice(["male", "female"]),
             )

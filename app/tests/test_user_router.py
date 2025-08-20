@@ -8,12 +8,10 @@ from main import app
 
 async def test_api_create_user() -> None:
     # given
-    data = {"username": "testuser", "age": 20, "gender": GenderEnum.male}
+    data = {"username": "testuser", "password": "password1234", "age": 20, "gender": GenderEnum.male}
 
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.post(url="/users", json=data)
 
     # then
@@ -26,14 +24,40 @@ async def test_api_create_user() -> None:
     assert created_user.gender == data["gender"]
 
 
+async def test_api_login_user() -> None:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
+        # given
+        create_response = await client.post(
+            url="/users", json={"username": "testuser", "password": "password123", "age": 20, "gender": GenderEnum.male}
+        )
+        user_id = create_response.json()
+        user = UserModel.get(id=user_id)
+
+        assert isinstance(user, UserModel)
+        # when
+        response = await client.post(url="/users/login", json={"username": user.username, "password": "password123"})
+
+        # then
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert response.cookies.get("access_token") is not None
+        assert response.cookies.get("refresh_token") is not None
+
+
+async def test_api_login_user_when_use_invalid_user_data() -> None:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
+        # when
+        response = await client.post(url="/users/login", json={"username": "invalid", "password": "password12123"})
+
+        # then
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 async def test_api_get_all_users() -> None:
     # given
     UserModel.create_dummy()
 
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.get(url="/users")
 
     # then
@@ -48,9 +72,7 @@ async def test_api_get_all_users() -> None:
 
 async def test_api_get_all_users_when_user_not_found() -> None:
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.get(url="/users")
 
     # then
@@ -59,24 +81,20 @@ async def test_api_get_all_users_when_user_not_found() -> None:
 
 async def test_api_get_user() -> None:
     # given
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         create_response = await client.post(
             url="/users",
-            json={"username": "testuser", "age": 20, "gender": GenderEnum.male},
+            json={"username": "testuser", "password": "password123", "age": 20, "gender": GenderEnum.male},
         )
 
         user_id = create_response.json()
         user = UserModel.get(id=user_id)
 
-        assert user
+        assert isinstance(user, UserModel)
 
-    # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        response = await client.get(url=f"/users/{user_id}")
+        await client.post(url="/users/login", json={"username": user.username, "password": "password123"})
+        # when
+        response = await client.get(url="/users/me")
 
     # then
     assert response.status_code == status.HTTP_200_OK
@@ -87,38 +105,32 @@ async def test_api_get_user() -> None:
     assert user.gender == response_data["gender"]
 
 
-async def test_api_get_user_when_user_not_found() -> None:
+async def test_api_get_user_when_user_is_not_logged_in() -> None:
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        response = await client.get(url="/users/12312124113")
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
+        response = await client.get(url="/users/me")
 
     # then
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 async def test_api_update_user() -> None:
     # given
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         create_response = await client.post(
             url="/users",
-            json={"username": "testuser", "age": 20, "gender": GenderEnum.male},
+            json={"username": "testuser", "password": "password123", "age": 20, "gender": GenderEnum.male},
         )
 
         user_id = create_response.json()
         user = UserModel.get(id=user_id)
+        assert isinstance(user, UserModel)
 
-        assert user
+        await client.post(url="/users/login", json={"username": user.username, "password": "password123"})
 
-    # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+        # when
         response = await client.patch(
-            url=f"/users/{user_id}",
+            url="/users/me",
             json={
                 "username": (updated_username := "updated_username"),
                 "age": (updated_age := 30),
@@ -134,55 +146,45 @@ async def test_api_update_user() -> None:
     assert user.age == response_data["age"]
 
 
-async def test_api_update_user_when_user_not_found() -> None:
+async def test_api_update_user_when_user_is_not_logged_in() -> None:
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        response = await client.patch(
-            url="/users/12312124113", json={"username": "updated_user"}
-        )
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
+        response = await client.patch(url="/users/me", json={"username": "updated_user"})
 
     # then
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 async def test_api_delete_user() -> None:
     # given
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         create_response = await client.post(
             url="/users",
-            json={"username": "testuser", "age": 20, "gender": GenderEnum.male},
+            json={"username": "testuser", "password": "password123", "age": 20, "gender": GenderEnum.male},
         )
 
         user_id = create_response.json()
         user = UserModel.get(id=user_id)
+        assert isinstance(user, UserModel)
 
-        assert user
+        await client.post(url="/users/login", json={"username": user.username, "password": "password123"})
 
-    # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        response = await client.delete(url=f"/users/{user_id}")
+        # when
+        response = await client.delete(url="/users/me")
 
     # then
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
-    assert response_data["detail"] == f"User: {user_id}, Successfully Deleted."
+    assert response_data["detail"] == "Successfully Deleted."
 
 
-async def test_api_delete_user_when_user_not_found() -> None:
+async def test_api_delete_user_when_user_is_not_logged_in() -> None:
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        response = await client.delete(url="/users/12312124113")
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
+        response = await client.delete(url="/users/me")
 
     # then
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 async def test_api_search_user() -> None:
@@ -190,9 +192,7 @@ async def test_api_search_user() -> None:
     UserModel.create_dummy()
 
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.get(
             url="/users/search", params={"username": (username := "dummy1")}
         )
@@ -208,9 +208,7 @@ async def test_api_search_user() -> None:
 
 async def test_api_search_user_when_user_not_found() -> None:
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.get(url="/users/search?username=dasdad")
 
     # then

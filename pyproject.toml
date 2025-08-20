@@ -17,7 +17,10 @@ dependencies = [
     "black (>=25.1.0,<26.0.0)",
     "ruff (>=0.12.9,<0.13.0)",
     "mypy (>=1.17.1,<2.0.0)",
-    "pydantic (>=2.11.7,<3.0.0)"
+    "pydantic (>=2.11.7,<3.0.0)",
+    "passlib[bcrypt] (>=1.7.4,<2.0.0)",
+    "PyJWT (>=2.8.0,<3.0.0)",
+    "python-multipart (>=0.0.9,<1.0.0)"
 ]
 
 [tool.mypy]

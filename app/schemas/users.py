@@ -11,6 +11,7 @@ class GenderEnum(str, Enum):
 
 class UserCreateRequest(BaseModel):
     username: str
+    password: str
     age: int
     gender: GenderEnum
 
@@ -33,3 +34,8 @@ class UserSearchParams(BaseModel):
     username: Optional[str] = None
     age: Optional[Annotated[int, conint(gt=0)]] = None
     gender: Optional[GenderEnum] = None
+
+
+class UserLoginRequest(BaseModel):
+    username: str
+    password: str

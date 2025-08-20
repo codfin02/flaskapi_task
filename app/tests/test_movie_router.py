@@ -10,9 +10,7 @@ async def test_api_create_movie() -> None:
     data = {"title": "test_movie", "playtime": 120, "genre": ["Action", "Adventure"]}
 
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.post(url="/movies", json=data)
 
     # then
@@ -28,9 +26,7 @@ async def test_api_get_movies() -> None:
     MovieModel.create_dummy()
 
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.get(url="/movies")
 
     # then
@@ -48,9 +44,7 @@ async def test_api_get_movies_with_title_filter() -> None:
     MovieModel.create_dummy()
 
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.get(url="/movies?title=dummy_movie")
 
     # then
@@ -65,9 +59,7 @@ async def test_api_get_movies_with_genre_filter() -> None:
     MovieModel.create_dummy()
 
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.get(url="/movies?genre=Action")
 
     # then
@@ -79,9 +71,7 @@ async def test_api_get_movies_with_genre_filter() -> None:
 
 async def test_api_get_movie() -> None:
     # given
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         create_response = await client.post(
             url="/movies",
             json={"title": "test_movie", "playtime": 120, "genre": ["Action"]},
@@ -102,9 +92,7 @@ async def test_api_get_movie() -> None:
 
 async def test_api_get_movie_not_found() -> None:
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.get(url="/movies/99999")
 
     # then
@@ -113,9 +101,7 @@ async def test_api_get_movie_not_found() -> None:
 
 async def test_api_update_movie() -> None:
     # given
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         create_response = await client.post(
             url="/movies",
             json={"title": "test_movie", "playtime": 120, "genre": ["Action"]},
@@ -137,9 +123,7 @@ async def test_api_update_movie() -> None:
 
 async def test_api_update_movie_not_found() -> None:
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.patch(
             url="/movies/99999", json={"title": "updated_movie"}
         )
@@ -150,9 +134,7 @@ async def test_api_update_movie_not_found() -> None:
 
 async def test_api_delete_movie() -> None:
     # given
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         create_response = await client.post(
             url="/movies",
             json={"title": "test_movie", "playtime": 120, "genre": ["Action"]},
@@ -172,9 +154,7 @@ async def test_api_delete_movie() -> None:
 
 async def test_api_delete_movie_not_found() -> None:
     # when
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
         response = await client.delete(url="/movies/99999")
 
     # then
