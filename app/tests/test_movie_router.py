@@ -1,161 +1,213 @@
 import httpx
 from fastapi import status
+from tortoise.contrib.test import TestCase
 
 from main import app
-from app.models.movies import MovieModel
+from app.models.movies import Movie
 
-
-async def test_api_create_movie() -> None:
-    # given
-    data = {"title": "test_movie", "playtime": 120, "genre": ["Action", "Adventure"]}
-
-    # when
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        response = await client.post(url="/movies", json=data)
-
-    # then
-    assert response.status_code == status.HTTP_201_CREATED
-    created_movie = response.json()
-    assert created_movie["title"] == data["title"]
-    assert created_movie["playtime"] == data["playtime"]
-    assert created_movie["genre"] == data["genre"]
-
-
-async def test_api_get_movies() -> None:
-    # given
-    MovieModel.create_dummy()
-
-    # when
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        response = await client.get(url="/movies")
-
-    # then
-    assert response.status_code == status.HTTP_200_OK
-    movies = response.json()
-    assert len(movies) > 0
-    assert "id" in movies[0]
-    assert "title" in movies[0]
-    assert "playtime" in movies[0]
-    assert "genre" in movies[0]
-
-
-async def test_api_get_movies_with_title_filter() -> None:
-    # given
-    MovieModel.create_dummy()
-
-    # when
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        response = await client.get(url="/movies?title=dummy_movie")
-
-    # then
-    assert response.status_code == status.HTTP_200_OK
-    movies = response.json()
-    assert len(movies) > 0
-    assert all("dummy_movie" in movie["title"] for movie in movies)
-
-
-async def test_api_get_movies_with_genre_filter() -> None:
-    # given
-    MovieModel.create_dummy()
-
-    # when
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        response = await client.get(url="/movies?genre=Action")
-
-    # then
-    assert response.status_code == status.HTTP_200_OK
-    movies = response.json()
-    assert len(movies) > 0
-    assert all("Action" in movie["genre"] for movie in movies)
-
-
-async def test_api_get_movie() -> None:
-    # given
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        create_response = await client.post(
-            url="/movies",
-            json={"title": "test_movie", "playtime": 120, "genre": ["Action"]},
-        )
-        movie_id = create_response.json()["id"]
-
+class TestMovieRouter(TestCase):
+    async def test_api_create_movie(self) -> None:
         # when
-        response = await client.get(url=f"/movies/{movie_id}")
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/movies",
+                json={
+                    "title": (title := "test"),
+                    "plot": (plot := "test 중 입니다."),
+                    "cast": (
+                        cast := [
+                            {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
+                            {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                        ]
+                    ),
+                    "playtime": (playtime := 240),
+                    "genre": (genre := "SF"),
+                },
+            )
+
+        # then
+        assert response.status_code == status.HTTP_201_CREATED
+        response_json = response.json()
+        assert response_json["title"] == title
+        assert response_json["plot"] == plot
+        assert response_json["cast"] == cast
+        assert response_json["playtime"] == playtime
+        assert response_json["genre"] == genre
+
+    async def test_api_get_movies_when_query_param_is_nothing(self) -> None:
+        # given
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            for i in range(3):
+                await client.post(
+                    "/movies",
+                    json={
+                        "title": f"test{i}",
+                        "plot": "test 중 입니다.",
+                        "cast": [
+                            {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
+                            {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                        ],
+                        "playtime": 240,
+                        "genre": "SF",
+                    },
+                )
+
+            # when
+            response = await client.get("/movies")
 
         # then
         assert response.status_code == status.HTTP_200_OK
-        movie = response.json()
-        assert movie["id"] == movie_id
-        assert movie["title"] == "test_movie"
-        assert movie["playtime"] == 120
-        assert movie["genre"] == ["Action"]
+        response_json = response.json()
+        assert len(response_json) == await Movie.filter().count()
+        movies = await Movie.filter().order_by("id")
+        assert response_json[0]["id"] == movies[0].id
+        assert response_json[0]["title"] == movies[0].title
 
+    async def test_api_get_movies_when_query_param_is_not_none(self) -> None:
+        # given
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            await client.post(
+                "/movies",
+                json={
+                    "title": (title := "test"),
+                    "plot": (plot := "test 중 입니다."),
+                    "cast": (
+                        cast := [
+                            {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
+                            {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                        ]
+                    ),
+                    "playtime": (playtime := 240),
+                    "genre": (genre := "SF"),
+                },
+            )
 
-async def test_api_get_movie_not_found() -> None:
-    # when
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        response = await client.get(url="/movies/99999")
-
-    # then
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_api_update_movie() -> None:
-    # given
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        create_response = await client.post(
-            url="/movies",
-            json={"title": "test_movie", "playtime": 120, "genre": ["Action"]},
-        )
-        movie_id = create_response.json()["id"]
-
-        # when
-        response = await client.patch(
-            url=f"/movies/{movie_id}", json={"title": "updated_movie", "playtime": 150}
-        )
+            # when
+            response = await client.get("/movies", params={"title": title, "genre": genre})
 
         # then
         assert response.status_code == status.HTTP_200_OK
-        movie = response.json()
-        assert movie["title"] == "updated_movie"
-        assert movie["playtime"] == 150
-        assert movie["genre"] == ["Action"]
+        response_json = response.json()
+        assert len(response_json) == 1
+        assert response_json[0]["title"] == title
+        assert response_json[0]["plot"] == plot
+        assert response_json[0]["cast"] == cast
+        assert response_json[0]["genre"] == genre
+        assert response_json[0]["playtime"] == playtime
 
+    async def test_api_get_movie(self) -> None:
+        # given
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            create_response = await client.post(
+                "/movies",
+                json={
+                    "title": (title := "test"),
+                    "plot": (plot := "test 중 입니다."),
+                    "cast": (
+                        cast := [
+                            {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
+                            {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                        ]
+                    ),
+                    "playtime": (playtime := 240),
+                    "genre": (genre := "SF"),
+                },
+            )
+            movie_id = create_response.json()["id"]
+            # when
+            response = await client.get(f"/movies/{movie_id}")
 
-async def test_api_update_movie_not_found() -> None:
-    # when
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        response = await client.patch(
-            url="/movies/99999", json={"title": "updated_movie"}
-        )
+        # then
+        assert response.status_code == status.HTTP_200_OK
+        response_json = response.json()
+        assert response_json["title"] == title
+        assert response_json["plot"] == plot
+        assert response_json["cast"] == cast
+        assert response_json["playtime"] == playtime
+        assert response_json["genre"] == genre
 
-    # then
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-async def test_api_delete_movie() -> None:
-    # given
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        create_response = await client.post(
-            url="/movies",
-            json={"title": "test_movie", "playtime": 120, "genre": ["Action"]},
-        )
-        movie_id = create_response.json()["id"]
-
+    async def test_api_get_movie_when_movie_id_is_invalid(self) -> None:
         # when
-        response = await client.delete(url=f"/movies/{movie_id}")
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/movies/1232131311")
+
+        # then
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    async def test_api_update_movie(self) -> None:
+        # given
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            create_response = await client.post(
+                "/movies",
+                json={
+                    "title": "test",
+                    "plot": "test 중 입니다.",
+                    "cast": [
+                        {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
+                        {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                    ],
+                    "playtime": 240,
+                    "genre": "SF",
+                },
+            )
+            movie_id = create_response.json()["id"]
+
+            # when
+            response = await client.patch(
+                f"/movies/{movie_id}",
+                json={
+                    "title": (updated_title := "updated_title"),
+                    "playtime": (updated_playtime := 180),
+                    "genre": (updated_genre := "Fantasy"),
+                },
+            )
+
+        # then
+        assert response.status_code == status.HTTP_200_OK
+        response_json = response.json()
+        assert response_json["title"] == updated_title
+        assert response_json["playtime"] == updated_playtime
+        assert response_json["genre"] == updated_genre
+
+    async def test_api_update_movie_when_movie_id_is_invalid(self) -> None:
+        # when
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.patch(
+                "/movies/1232131311",
+                json={"title": "updated_title", "playtime": 180, "genre": "Fantasy"},
+            )
+
+        # then
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    async def test_api_delete_movie(self) -> None:
+        # given
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            create_response = await client.post(
+                "/movies",
+                json={
+                    "title": "test",
+                    "plot": "test 중 입니다.",
+                    "cast": [
+                        {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
+                        {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                    ],
+                    "playtime": 240,
+                    "genre": "SF",
+                },
+            )
+            movie_id = create_response.json()["id"]
+
+            # when
+            response = await client.delete(f"/movies/{movie_id}")
 
         # then
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
-        # verify movie is deleted
-        get_response = await client.get(url=f"/movies/{movie_id}")
-        assert get_response.status_code == status.HTTP_404_NOT_FOUND
+    async def test_api_delete_movie_when_movie_id_is_invalid(self) -> None:
+        # when
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.delete("/movies/1232131311")
 
-
-async def test_api_delete_movie_not_found() -> None:
-    # when
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app)) as client:
-        response = await client.delete(url="/movies/99999")
-
-    # then
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+        # then
+        assert response.status_code == status.HTTP_404_NOT_FOUND

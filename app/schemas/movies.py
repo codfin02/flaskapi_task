@@ -1,26 +1,31 @@
-from typing import List, Optional, Annotated
+from typing import Annotated
+
 from pydantic import BaseModel, Field
 
+from app.models.movies import CastModel, GenreEnum
 
 class CreateMovieRequest(BaseModel):
     title: str
+    plot: str
+    cast: list[CastModel]
     playtime: int
-    genre: List[str]
-
-
-class MovieUpdateRequest(BaseModel):
-    title: Optional[str] = None
-    playtime: Optional[Annotated[int, Field(gt=0)]] = None
-    genre: Optional[List[str]] = None
-
+    genre: GenreEnum
 
 class MovieResponse(BaseModel):
     id: int
     title: str
+    plot: str
+    cast: list[CastModel]
     playtime: int
-    genre: List[str]
-
+    genre: GenreEnum
 
 class MovieSearchParams(BaseModel):
-    title: Optional[str] = None
-    genre: Optional[str] = None
+    title: str | None = None
+    genre: GenreEnum | None = None
+
+class MovieUpdateRequest(BaseModel):
+    title: str | None = None
+    plot: str | None = None
+    cast: list[CastModel] | None = None
+    playtime: Annotated[int, Field(gt=0)] | None = None
+    genre: GenreEnum | None = None

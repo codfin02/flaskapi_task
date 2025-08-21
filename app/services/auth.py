@@ -1,22 +1,17 @@
-from fastapi import HTTPException, Request, Response, status
+from fastapi import HTTPException, Request, Response
+from passlib.context import CryptContext
 
-from app.models.users import UserModel
+from app.models.users import User
 from app.services.jwt import JWTService
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class AuthService:
     def __init__(self) -> None:
         self.jwt_service = JWTService()
 
-    def login(self, username: str, password: str) -> Response:
-        """
-        입력받은 username, password를 검증하여 유저를 가져오고,
-        가져온 유저에 대해서 액세스 토큰, 리프레쉬 토큰을 생성하고
-        이를 응답으로 반환하는 함수입니다.
-        """
-        user = UserModel.authenticate(username, password)
-        if user is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password")
+    async def login(self, username: str, password: str) -> Response:
+        user = await self.authenticate(username, password)
 
         access_token = self.jwt_service.create_access_token(data={"user_id": user.id})
         refresh_token = self.jwt_service.create_refresh_token(data={"user_id": user.id})
@@ -26,30 +21,37 @@ class AuthService:
         return response
 
     def _get_login_response(self, access_token: str, refresh_token: str) -> Response:
-        """
-        입력받은 액세스 토큰과 리프레쉬 토큰을 쿠키에 저장하여 이를 응답 객체(Response)로 반환합니다.
-        """
         response = Response(status_code=204)
         self.jwt_service.attach_jwt_token_in_response_cookie(access_token, refresh_token, response)
         return response
 
-    def get_current_user(self, request: Request) -> Request:
-        """
-        요청 객체에 포함된 쿠키로 부터 엑세스 토큰을 가져와 이를 디코딩합니다.
-        디코딩 된 토큰의 페이로드로 부터 유저 아이디를 가져옵니다.
-        가져온 유저아이디를 통해 유저객체를 가져오고 요청객체의 state에 user 객체를 추가하고
-        요청 객체를 리턴합니다.
-        """
+    async def get_current_user(self, request: Request) -> Request:
         access_token = request.cookies.get("access_token")
         if not access_token:
-            raise HTTPException(status_code=401, detail="Unauthorized.")
+            raise HTTPException(status_code=401, detail="This Request requires an access token.")
 
         decoded = self.jwt_service._decode(access_token)
 
-        user = UserModel.get(id=decoded["user_id"])
+        user = await User.get_or_none(id=decoded["user_id"])
         if not user:
-            raise HTTPException(status_code=401, detail="Unauthorized.")
+            raise HTTPException(status_code=401, detail="Invalid Access Token.")
 
         request.state.user = user
 
-        return request 
+        return request
+
+    @staticmethod
+    def hash_password(password: str) -> str:
+        return pwd_context.hash(password)
+
+    @staticmethod
+    def verify_password(plain_password: str, hashed_password: str) -> bool:
+        return pwd_context.verify(plain_password, hashed_password)
+
+    async def authenticate(self, username: str, password: str) -> User:
+        user = await User.get_or_none(username=username)
+        if user is None:
+            raise HTTPException(status_code=401, detail=f"username: {username} - not found.")
+        if not self.verify_password(password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="password incorrect.")
+        return user 

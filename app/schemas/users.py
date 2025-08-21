@@ -1,13 +1,8 @@
-from enum import Enum
-from typing import Optional, Annotated
+from typing import Annotated
 
-from pydantic import BaseModel, conint
+from pydantic import BaseModel, Field
 
-
-class GenderEnum(str, Enum):
-    male = "male"
-    female = "female"
-
+from app.models.users import GenderEnum
 
 class UserCreateRequest(BaseModel):
     username: str
@@ -15,26 +10,23 @@ class UserCreateRequest(BaseModel):
     age: int
     gender: GenderEnum
 
-
 class UserUpdateRequest(BaseModel):
-    username: Optional[str] = None
-    age: Optional[int] = None
+    username: str | None = None
+    password: str | None = None
+    age: int | None = None
 
+class UserSearchParams(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    username: str | None = None
+    age: Annotated[int, Field(gt=0)] | None = None
+    gender: GenderEnum | None = None
 
 class UserResponse(BaseModel):
     id: int
     username: str
     age: int
     gender: GenderEnum
-
-
-class UserSearchParams(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    username: Optional[str] = None
-    age: Optional[Annotated[int, conint(gt=0)]] = None
-    gender: Optional[GenderEnum] = None
-
 
 class UserLoginRequest(BaseModel):
     username: str
