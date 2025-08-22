@@ -67,7 +67,7 @@ class TestUserRouter(TestCase):
             # when
             response = await client.post(
                 url="/users/login",
-                json={"username": (username := "invalid"), "password": "password12123"},
+                json={"username": "invalid", "password": "password12123"},
             )
 
             # then

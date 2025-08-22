@@ -56,20 +56,18 @@ async def get_all_users() -> list[UserResponse]:
 
 @user_router.post("/login", status_code=204)
 async def login(
-    data: UserLoginRequest, 
-    response: Response,
-    auth_service: AuthService = Depends()
+    data: UserLoginRequest, response: Response, auth_service: AuthService = Depends()
 ) -> None:
     """사용자 로그인 API - JWT 토큰 생성 및 쿠키 설정"""
     user = await auth_service.login(data.username, data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
     # JWT 토큰 생성
     jwt_service = JWTService()
     access_token = jwt_service.create_access_token({"username": user.username})
     refresh_token = jwt_service.create_refresh_token({"username": user.username})
-    
+
     # 쿠키에 토큰 설정
     jwt_service.attach_jwt_token_in_response_cookie(
         access_token, refresh_token, response
