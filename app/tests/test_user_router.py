@@ -72,7 +72,7 @@ class TestUserRouter(TestCase):
 
             # then
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
-            assert response.json()["detail"] == f"username: {username} - not found."
+            assert response.json()["detail"] == "Invalid credentials"
 
     async def test_api_login_user_when_use_invalid_password(self) -> None:
         async with httpx.AsyncClient(
@@ -96,7 +96,7 @@ class TestUserRouter(TestCase):
 
             # then
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
-            assert response.json()["detail"] == "password incorrect."
+            assert response.json()["detail"] == "Invalid credentials"
 
     async def test_api_get_all_users(self) -> None:
         # given
@@ -189,7 +189,7 @@ class TestUserRouter(TestCase):
             )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.json()["detail"] == "Invalid Access Token."
+        assert response.json()["detail"] == "Invalid token"
 
     async def test_api_get_user_when_user_is_not_logged_in(self) -> None:
         # when
