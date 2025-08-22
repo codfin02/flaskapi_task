@@ -2,17 +2,25 @@ import httpx
 from fastapi import status
 from tortoise.contrib.test import TestCase
 
-from main import app
 from app.models.users import GenderEnum, User
 from app.services.jwt import JWTService
+from main import app
+
 
 class TestUserRouter(TestCase):
     async def test_api_create_user(self) -> None:
         # given
-        data = {"username": "testuser", "password": "password1234", "age": 20, "gender": GenderEnum.MALE}
+        data = {
+            "username": "testuser",
+            "password": "password1234",
+            "age": 20,
+            "gender": GenderEnum.MALE,
+        }
 
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.post(url="/users", json=data)
 
         # then
@@ -25,7 +33,9 @@ class TestUserRouter(TestCase):
         assert created_user.gender == data["gender"]
 
     async def test_api_login_user(self) -> None:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             # given
             create_response = await client.post(
                 url="/users",
@@ -40,7 +50,10 @@ class TestUserRouter(TestCase):
             user = await User.get(id=user_id)
 
             # when
-            response = await client.post(url="/users/login", json={"username": user.username, "password": password})
+            response = await client.post(
+                url="/users/login",
+                json={"username": user.username, "password": password},
+            )
 
             # then
             assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -48,10 +61,13 @@ class TestUserRouter(TestCase):
             assert response.cookies.get("refresh_token") is not None
 
     async def test_api_login_user_when_use_invalid_username(self) -> None:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             # when
             response = await client.post(
-                url="/users/login", json={"username": (username := "invalid"), "password": "password12123"}
+                url="/users/login",
+                json={"username": (username := "invalid"), "password": "password12123"},
             )
 
             # then
@@ -59,7 +75,9 @@ class TestUserRouter(TestCase):
             assert response.json()["detail"] == f"username: {username} - not found."
 
     async def test_api_login_user_when_use_invalid_password(self) -> None:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             # given
             await client.post(
                 url="/users",
@@ -71,7 +89,10 @@ class TestUserRouter(TestCase):
                 },
             )
             # when
-            response = await client.post(url="/users/login", json={"username": username, "password": "password12123"})
+            response = await client.post(
+                url="/users/login",
+                json={"username": username, "password": "password12123"},
+            )
 
             # then
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -79,7 +100,9 @@ class TestUserRouter(TestCase):
 
     async def test_api_get_all_users(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             for i in range(3):
                 await client.post(
                     url="/users",
@@ -106,7 +129,9 @@ class TestUserRouter(TestCase):
 
     async def test_api_get_all_users_when_user_not_found(self) -> None:
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.get(url="/users")
 
         # then
@@ -114,7 +139,9 @@ class TestUserRouter(TestCase):
 
     async def test_api_get_user(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             create_response = await client.post(
                 url="/users",
                 json={
@@ -127,7 +154,10 @@ class TestUserRouter(TestCase):
             user_id = create_response.json()
             user = await User.get(id=user_id)
 
-            await client.post(url="/users/login", json={"username": user.username, "password": password})
+            await client.post(
+                url="/users/login",
+                json={"username": user.username, "password": password},
+            )
             # when
             response = await client.get(url="/users/me")
 
@@ -140,22 +170,32 @@ class TestUserRouter(TestCase):
         assert user.gender == response_data["gender"]
 
     async def test_api_get_user_when_token_has_invalid_value(self) -> None:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post(url="/users/me", cookies={"access_token": "invalid"})
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                url="/users/me", cookies={"access_token": "invalid"}
+            )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     async def test_api_get_user_when_token_encoded_using_invalid_user_id(self) -> None:
         access_token = JWTService().create_access_token({"user_id": 31241312312})
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.post(url="/users/me", cookies={"access_token": access_token})
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                url="/users/me", cookies={"access_token": access_token}
+            )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.json()["detail"] == "Invalid Access Token."
 
     async def test_api_get_user_when_user_is_not_logged_in(self) -> None:
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.get(url="/users/me")
 
         # then
@@ -163,7 +203,9 @@ class TestUserRouter(TestCase):
 
     async def test_api_update_user(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             create_response = await client.post(
                 url="/users",
                 json={
@@ -176,12 +218,18 @@ class TestUserRouter(TestCase):
             user_id = create_response.json()
             user = await User.get(id=user_id)
 
-            await client.post(url="/users/login", json={"username": user.username, "password": password})
+            await client.post(
+                url="/users/login",
+                json={"username": user.username, "password": password},
+            )
 
             # when
             response = await client.patch(
                 url="/users/me",
-                json={"username": (updated_username := "updated_username"), "age": (updated_age := 30)},
+                json={
+                    "username": (updated_username := "updated_username"),
+                    "age": (updated_age := 30),
+                },
             )
 
         # then
@@ -195,15 +243,21 @@ class TestUserRouter(TestCase):
 
     async def test_api_update_user_when_user_is_not_logged_in(self) -> None:
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.patch(url="/users/me", json={"username": "updated_user"})
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.patch(
+                url="/users/me", json={"username": "updated_user"}
+            )
 
         # then
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     async def test_api_delete_user(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             create_response = await client.post(
                 url="/users",
                 json={
@@ -216,7 +270,10 @@ class TestUserRouter(TestCase):
             user_id = create_response.json()
             user = await User.get(id=user_id)
 
-            await client.post(url="/users/login", json={"username": user.username, "password": password})
+            await client.post(
+                url="/users/login",
+                json={"username": user.username, "password": password},
+            )
 
             # when
             response = await client.delete(url="/users/me")
@@ -228,7 +285,9 @@ class TestUserRouter(TestCase):
 
     async def test_api_delete_user_when_user_is_not_logged_in(self) -> None:
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.delete(url="/users/me")
 
         # then
@@ -236,7 +295,9 @@ class TestUserRouter(TestCase):
 
     async def test_api_search_user(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             for i in range(3):
                 await client.post(
                     url="/users",
@@ -248,7 +309,9 @@ class TestUserRouter(TestCase):
                     },
                 )
             # when
-            response = await client.get(url="/users/search", params={"username": (username := "testuser1")})
+            response = await client.get(
+                url="/users/search", params={"username": (username := "testuser1")}
+            )
 
         # then
         assert response.status_code == status.HTTP_200_OK
@@ -258,7 +321,9 @@ class TestUserRouter(TestCase):
 
     async def test_api_search_user_when_user_not_found(self) -> None:
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.get(url="/users/search?username=dasdad")
 
         # then

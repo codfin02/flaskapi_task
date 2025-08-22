@@ -1,5 +1,7 @@
 from tortoise import fields
+from tortoise.models import Model
 
-class BaseModel:
+
+class BaseModel(Model):
     id = fields.BigIntField(primary_key=True, autoincrement=True)
-    created_at = fields.DatetimeField(auto_now_add=True) 
+    created_at = fields.DatetimeField(auto_now_add=True)

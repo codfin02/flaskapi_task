@@ -7,6 +7,7 @@ from fastapi import HTTPException, Response, status
 
 from app.configs import config
 
+
 class JWTService:
     def __init__(self) -> None:
         self.algorithm = config.JWT_ALGORITHM
@@ -19,6 +20,13 @@ class JWTService:
         expire = datetime.now(ZoneInfo("Asia/Seoul")) + timedelta(minutes=expires_in)
         payload.update({"exp": expire})
         return jwt.encode(payload, self._secret_key, algorithm=self.algorithm)
+
+    def decode_token(self, token: str) -> Any:
+        """JWT 토큰을 디코딩하는 public 메서드"""
+        try:
+            return jwt.decode(token, self._secret_key, algorithms=[self.algorithm])
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
 
     def _decode(self, token: str) -> Any:
         try:
@@ -54,4 +62,4 @@ class JWTService:
             secure=False,
             samesite="lax",
         )
-        return response 
+        return response

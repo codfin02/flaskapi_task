@@ -33,6 +33,7 @@ TORTOISE_ORM = {
     "timezone": "Asia/Seoul",
 }
 
+
 def initialize_tortoise(app: FastAPI) -> None:
     Tortoise.init_models(TORTOISE_APP_MODELS, "models")
-    register_tortoise(app, config=TORTOISE_ORM) 
+    register_tortoise(app, config=TORTOISE_ORM)

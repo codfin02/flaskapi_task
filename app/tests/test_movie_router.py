@@ -2,13 +2,16 @@ import httpx
 from fastapi import status
 from tortoise.contrib.test import TestCase
 
-from main import app
 from app.models.movies import Movie
+from main import app
+
 
 class TestMovieRouter(TestCase):
     async def test_api_create_movie(self) -> None:
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.post(
                 "/movies",
                 json={
@@ -16,8 +19,8 @@ class TestMovieRouter(TestCase):
                     "plot": (plot := "test 중 입니다."),
                     "cast": (
                         cast := [
-                            {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
-                            {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                            {"name": "lee2", "role": "actor"},
+                            {"name": "lee3", "role": "actor"},
                         ]
                     ),
                     "playtime": (playtime := 240),
@@ -36,7 +39,9 @@ class TestMovieRouter(TestCase):
 
     async def test_api_get_movies_when_query_param_is_nothing(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             for i in range(3):
                 await client.post(
                     "/movies",
@@ -44,8 +49,8 @@ class TestMovieRouter(TestCase):
                         "title": f"test{i}",
                         "plot": "test 중 입니다.",
                         "cast": [
-                            {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
-                            {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                            {"name": "lee2", "role": "actor"},
+                            {"name": "lee3", "role": "actor"},
                         ],
                         "playtime": 240,
                         "genre": "SF",
@@ -65,7 +70,9 @@ class TestMovieRouter(TestCase):
 
     async def test_api_get_movies_when_query_param_is_not_none(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             await client.post(
                 "/movies",
                 json={
@@ -73,8 +80,8 @@ class TestMovieRouter(TestCase):
                     "plot": (plot := "test 중 입니다."),
                     "cast": (
                         cast := [
-                            {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
-                            {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                            {"name": "lee2", "role": "actor"},
+                            {"name": "lee3", "role": "actor"},
                         ]
                     ),
                     "playtime": (playtime := 240),
@@ -83,7 +90,9 @@ class TestMovieRouter(TestCase):
             )
 
             # when
-            response = await client.get("/movies", params={"title": title, "genre": genre})
+            response = await client.get(
+                "/movies", params={"title": title, "genre": genre}
+            )
 
         # then
         assert response.status_code == status.HTTP_200_OK
@@ -97,7 +106,9 @@ class TestMovieRouter(TestCase):
 
     async def test_api_get_movie(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             create_response = await client.post(
                 "/movies",
                 json={
@@ -105,8 +116,8 @@ class TestMovieRouter(TestCase):
                     "plot": (plot := "test 중 입니다."),
                     "cast": (
                         cast := [
-                            {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
-                            {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                            {"name": "lee2", "role": "actor"},
+                            {"name": "lee3", "role": "actor"},
                         ]
                     ),
                     "playtime": (playtime := 240),
@@ -128,7 +139,9 @@ class TestMovieRouter(TestCase):
 
     async def test_api_get_movie_when_movie_id_is_invalid(self) -> None:
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.get("/movies/1232131311")
 
         # then
@@ -136,15 +149,17 @@ class TestMovieRouter(TestCase):
 
     async def test_api_update_movie(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             create_response = await client.post(
                 "/movies",
                 json={
                     "title": "test",
                     "plot": "test 중 입니다.",
                     "cast": [
-                        {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
-                        {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                        {"name": "lee2", "role": "actor"},
+                        {"name": "lee3", "role": "actor"},
                     ],
                     "playtime": 240,
                     "genre": "SF",
@@ -171,7 +186,9 @@ class TestMovieRouter(TestCase):
 
     async def test_api_update_movie_when_movie_id_is_invalid(self) -> None:
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.patch(
                 "/movies/1232131311",
                 json={"title": "updated_title", "playtime": 180, "genre": "Fantasy"},
@@ -182,15 +199,17 @@ class TestMovieRouter(TestCase):
 
     async def test_api_delete_movie(self) -> None:
         # given
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             create_response = await client.post(
                 "/movies",
                 json={
                     "title": "test",
                     "plot": "test 중 입니다.",
                     "cast": [
-                        {"name": "lee2", "age": 23, "agency": "A actors", "gender": "male"},
-                        {"name": "lee3", "age": 24, "agency": "B actors", "gender": "male"},
+                        {"name": "lee2", "role": "actor"},
+                        {"name": "lee3", "role": "actor"},
                     ],
                     "playtime": 240,
                     "genre": "SF",
@@ -206,7 +225,9 @@ class TestMovieRouter(TestCase):
 
     async def test_api_delete_movie_when_movie_id_is_invalid(self) -> None:
         # when
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.delete("/movies/1232131311")
 
         # then

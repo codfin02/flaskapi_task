@@ -24,7 +24,8 @@ dependencies = [
     "aerich (>=0.9.1,<0.10.0)",
     "tomlkit (>=0.13.3,<0.14.0)",
     "pyjwt (>=2.10.1,<3.0.0)",
-    "passlib[bcrypt] (>=1.7.4,<2.0.0)"
+    "passlib[bcrypt] (>=1.7.4,<2.0.0)",
+    "python-multipart (>=0.0.20,<0.0.21)"
 ]
 
 [tool.mypy]

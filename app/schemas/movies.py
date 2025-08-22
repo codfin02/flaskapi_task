@@ -4,12 +4,14 @@ from pydantic import BaseModel, Field
 
 from app.models.movies import CastModel, GenreEnum
 
+
 class CreateMovieRequest(BaseModel):
     title: str
     plot: str
     cast: list[CastModel]
     playtime: int
     genre: GenreEnum
+
 
 class MovieResponse(BaseModel):
     id: int
@@ -18,10 +20,13 @@ class MovieResponse(BaseModel):
     cast: list[CastModel]
     playtime: int
     genre: GenreEnum
+    poster_image_url: str | None = None
+
 
 class MovieSearchParams(BaseModel):
     title: str | None = None
     genre: GenreEnum | None = None
+
 
 class MovieUpdateRequest(BaseModel):
     title: str | None = None
