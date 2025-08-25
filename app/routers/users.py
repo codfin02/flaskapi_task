@@ -166,3 +166,23 @@ async def register_profile_image(image: UploadFile, request: Request) -> UserRes
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+@user_router.get("/me/reviews")
+async def get_my_reviews(request: Request) -> list[dict[str, int | str | None]]:
+    """내가 쓴 리뷰 리스트 조회 API"""
+    user = request.state.user
+    from app.models.reviews import Review
+
+    reviews = await Review.filter(user_id=user.id).all()
+    return [
+        {
+            "id": review.id,
+            "user_id": review.user.id,
+            "movie_id": review.movie.id,
+            "title": review.title,
+            "content": review.content,
+            "review_image_url": review.review_image_url,
+        }
+        for review in reviews
+    ]

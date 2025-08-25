@@ -137,3 +137,24 @@ async def register_poster_image(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+@movie_router.get("/{movie_id}/reviews")
+async def get_movie_reviews(
+    movie_id: int = Path(gt=0),
+) -> list[dict[str, int | str | None]]:
+    """특정 영화의 리뷰 리스트 조회 API"""
+    from app.models.reviews import Review
+
+    reviews = await Review.filter(movie_id=movie_id).all()
+    return [
+        {
+            "id": review.id,
+            "user_id": review.user.id,
+            "movie_id": review.movie.id,
+            "title": review.title,
+            "content": review.content,
+            "review_image_url": review.review_image_url,
+        }
+        for review in reviews
+    ]

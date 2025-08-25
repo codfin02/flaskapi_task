@@ -7,6 +7,8 @@ from app.configs import config
 TORTOISE_APP_MODELS = [
     "app.models.users",
     "app.models.movies",
+    "app.models.reviews",
+    "app.models.likes",
     "aerich.models",
 ]
 
