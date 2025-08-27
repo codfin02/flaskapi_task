@@ -8,6 +8,7 @@ from fastapi import (
     Request,
     UploadFile,
     Response,
+    Path,
 )
 
 from app.models.users import User
@@ -17,6 +18,9 @@ from app.schemas.users import (
     UserResponse,
     UserSearchParams,
     UserUpdateRequest,
+    FollowResponse,
+    FollowingUserResponse,
+    FollowerUserResponse,
 )
 from app.services.auth import AuthService
 from app.services.jwt import JWTService
@@ -185,4 +189,97 @@ async def get_my_reviews(request: Request) -> list[dict[str, int | str | None]]:
             "review_image_url": review.review_image_url,
         }
         for review in reviews
+    ]
+
+
+@user_router.post("/{user_id}/follow", status_code=200)
+async def following_user(
+    user: Annotated[User, Depends()], user_id: int = Path(gt=0)
+) -> FollowResponse:
+    """사용자 팔로우 API"""
+    from app.models.follows import Follow
+
+    follow, _ = await Follow.get_or_create(follower_id=user.id, following_id=user_id)
+
+    if not follow.is_following:
+        follow.is_following = True
+        await follow.save()
+
+    return FollowResponse(
+        follower_id=follow.follower.id,
+        following_id=follow.following.id,
+        is_following=follow.is_following,
+    )
+
+
+@user_router.post("/{user_id}/unfollow", status_code=200)
+async def unfollowing_user(
+    user: Annotated[User, Depends()], user_id: int = Path(gt=0)
+) -> FollowResponse:
+    """사용자 언팔로우 API"""
+    from app.models.follows import Follow
+
+    follow = await Follow.filter(follower_id=user.id, following_id=user_id).first()
+
+    if not follow:
+        return FollowResponse(
+            follower_id=user.id, following_id=user_id, is_following=False
+        )
+
+    if follow.is_following:
+        follow.is_following = False
+        await follow.save()
+
+    return FollowResponse(
+        follower_id=follow.follower.id,
+        following_id=follow.following.id,
+        is_following=follow.is_following,
+    )
+
+
+@user_router.get("/me/followings", status_code=200)
+async def get_my_followings(
+    user: Annotated[User, Depends()],
+) -> list[FollowingUserResponse]:
+    """내가 팔로우한 사용자 목록 조회 API"""
+    from app.models.follows import Follow
+    from tortoise.expressions import Subquery
+
+    following_users = await User.filter(
+        id__in=Subquery(
+            Follow.filter(follower_id=user.id, is_following=True).values("following_id")
+        )
+    ).all()
+
+    return [
+        FollowingUserResponse(
+            following_id=user.id,
+            username=user.username,
+            profile_image_url=user.profile_image_url,
+        )
+        for user in following_users
+    ]
+
+
+@user_router.get("/me/followers", status_code=200)
+async def get_my_followers(
+    user: Annotated[User, Depends()],
+) -> list[FollowerUserResponse]:
+    """나를 팔로우하는 사용자 목록 조회 API"""
+    from app.models.follows import Follow
+    from tortoise.expressions import Subquery
+
+    follower_users = await User.filter(
+        id__in=Subquery(
+            Follow.filter(following_id=user.id, is_following=True).values("follower_id")
+        )
+    ).all()
+
+    return [
+        FollowerUserResponse(
+            follower_id=user.id,
+            username=user.username,
+            profile_image_url=user.profile_image_url,
+        )
+        for user in follower_users
     ]

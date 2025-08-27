@@ -9,6 +9,7 @@ TORTOISE_APP_MODELS = [
     "app.models.movies",
     "app.models.reviews",
     "app.models.likes",
+    "app.models.follows",
     "aerich.models",
 ]
 

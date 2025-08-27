@@ -158,3 +158,22 @@ async def get_movie_reviews(
         }
         for review in reviews
     ]
+
+
+@movie_router.get("/{movie_id}/reaction_count", status_code=200)
+async def get_movie_reaction_count(movie_id: int = Path(gt=0)) -> dict[str, int]:
+    """영화 리액션 개수 조회 API"""
+    from app.models.likes import MovieReaction, ReactionTypeEnum
+
+    like_count = await MovieReaction.filter(
+        movie_id=movie_id, type=ReactionTypeEnum.LIKE
+    ).count()
+    dislike_count = await MovieReaction.filter(
+        movie_id=movie_id, type=ReactionTypeEnum.DISLIKE
+    ).count()
+
+    return {
+        "movie_id": movie_id,
+        "like_count": like_count,
+        "dislike_count": dislike_count,
+    }

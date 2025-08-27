@@ -2,10 +2,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path
 
-from app.models.likes import ReviewLike
+from app.models.likes import ReviewLike, MovieReaction, ReactionTypeEnum
 from app.models.users import User
 from app.schemas.likes import (
     ReviewLikeResponse,
+    MovieReactionResponse,
 )
 
 like_router = APIRouter(prefix="/likes", tags=["likes"])
@@ -53,4 +54,42 @@ async def unlike_review(
         user_id=review_like.user.id,
         review_id=review_like.review.id,
         is_liked=review_like.is_liked,
+    )
+
+
+@like_router.post("/movies/{movie_id}/like", status_code=200)
+async def like_movie(
+    user: Annotated[User, Depends()], movie_id: int = Path(gt=0)
+) -> MovieReactionResponse:
+    """영화 좋아요 API"""
+    reaction, _ = await MovieReaction.get_or_create(user_id=user.id, movie_id=movie_id)
+
+    if reaction.type != ReactionTypeEnum.LIKE:
+        reaction.type = ReactionTypeEnum.LIKE
+        await reaction.save()
+
+    return MovieReactionResponse(
+        id=reaction.id,
+        user_id=reaction.user.id,
+        movie_id=reaction.movie.id,
+        type=reaction.type,
+    )
+
+
+@like_router.post("/movies/{movie_id}/dislike", status_code=200)
+async def dislike_movie(
+    user: Annotated[User, Depends()], movie_id: int = Path(gt=0)
+) -> MovieReactionResponse:
+    """영화 싫어요 API"""
+    reaction, _ = await MovieReaction.get_or_create(user_id=user.id, movie_id=movie_id)
+
+    if reaction.type != ReactionTypeEnum.DISLIKE:
+        reaction.type = ReactionTypeEnum.DISLIKE
+        await reaction.save()
+
+    return MovieReactionResponse(
+        id=reaction.id,
+        user_id=reaction.user.id,
+        movie_id=reaction.movie.id,
+        type=reaction.type,
     )
